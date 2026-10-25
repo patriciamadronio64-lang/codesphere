@@ -1,0 +1,236 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}CodeSphere{% endblock %}</title>
+    <style>
+        :root {
+            --bg: #0b1020;
+            --panel: #141c30;
+            --border: #293550;
+            --text: #f5f7ff;
+            --muted: #aab6d0;
+            --blue: #7795ff;
+            --mint: #64dfc0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+        }
+
+        a { color: inherit; }
+        .container { width: min(1120px, 92%); margin: auto; }
+
+        header {
+            background: #10172a;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav {
+            min-height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            flex-wrap: wrap;
+            padding: 14px 0;
+        }
+
+        .logo {
+            font-size: 25px;
+            font-weight: 800;
+            color: var(--blue);
+            text-decoration: none;
+        }
+
+        nav {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 15px;
+        }
+
+        nav a {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        nav a:hover, nav a.active { color: white; }
+
+        .nav-form { display: inline; }
+
+        .btn {
+            display: inline-block;
+            background: #5578f5;
+            color: white;
+            padding: 10px 16px;
+            border: 0;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-secondary {
+            background: #263452;
+            border: 1px solid #3b4c70;
+        }
+
+        main { min-height: 75vh; padding: 45px 0 70px; }
+
+        .hero {
+            padding: 35px;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            background: radial-gradient(ellipse at top left, #26376c, #14182b 75%);
+            margin-bottom: 35px;
+        }
+
+        .tag {
+            color: var(--mint);
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        h1 {
+            font-size: clamp(32px, 5vw, 48px);
+            line-height: 1.2;
+            margin: 10px 0;
+        }
+
+        h2 { margin-bottom: 10px; }
+
+        .muted { color: var(--muted); }
+        .section-head { margin-bottom: 25px; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 18px;
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            padding: 23px;
+            border-radius: 14px;
+        }
+
+        .card-icon {
+            font-size: 30px;
+            margin-bottom: 10px;
+        }
+
+        .card h3 { margin: 8px 0; }
+        .card p { color: var(--muted); margin-bottom: 15px; }
+        .card a { color: var(--blue); text-decoration: none; font-weight: bold; }
+
+        .form-card {
+            max-width: 500px;
+            margin: 0 auto;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            padding: 28px;
+        }
+
+        label {
+            display: block;
+            margin: 15px 0 6px;
+            font-weight: bold;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            background: #0b1020;
+            color: white;
+            border: 1px solid #354363;
+            border-radius: 8px;
+            font: inherit;
+        }
+
+        textarea { min-height: 140px; resize: vertical; }
+        .form-card .btn { margin-top: 20px; }
+        .full { width: 100%; }
+
+        .notice {
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            background: #1d2a46;
+            border: 1px solid #3b4c70;
+        }
+
+        .notice.success { border-color: #287b61; }
+        .notice.error { border-color: #a54858; }
+
+        footer {
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+            text-align: center;
+            padding: 25px 0;
+        }
+
+        @media (max-width: 700px) {
+            .nav { flex-direction: column; align-items: flex-start; }
+            nav { gap: 12px; }
+            .hero { padding: 24px; }
+            main { padding-top: 25px; }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div class="container nav">
+        <a class="logo" href="{{ url_for('home') }}">CodeSphere.</a>
+
+        <nav>
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('section', name='learning') }}">Learning</a>
+            <a href="{{ url_for('section', name='projects') }}">Projects</a>
+            <a href="{{ url_for('section', name='tools') }}">Tools</a>
+            <a href="{{ url_for('section', name='careers') }}">Careers</a>
+            <a href="{{ url_for('section', name='community') }}">Community</a>
+            <a href="{{ url_for('section', name='about') }}">About</a>
+            <a href="{{ url_for('contact') }}">Contact</a>
+
+            {% if session.get('user_id') %}
+                <a href="{{ url_for('profile') }}">My Profile</a>
+                <form class="nav-form" action="{{ url_for('logout') }}" method="POST">
+                    <button class="btn" type="submit">Logout</button>
+                </form>
+            {% else %}
+                <a href="{{ url_for('login') }}">Login</a>
+                <a class="btn" href="{{ url_for('register') }}">Register</a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
+
+<main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="notice {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</main>
+
+<footer>
+    <div class="container">
+        © 2026 CodeSphere · Learn. Build. Connect. Innovate.
+    </div>
+</footer>
+</body>
+</html>

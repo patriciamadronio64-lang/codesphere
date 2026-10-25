@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Contact | CodeSphere{% endblock %}
+
+{% block content %}
+<section class="form-card">
+    <span class="tag">GET IN TOUCH</span>
+    <h1 style="font-size: 32px;">Contact Us</h1>
+    <p class="muted">Have a question or suggestion? Send it to us.</p>
+
+    <form method="POST" action="{{ url_for('contact') }}">
+        <label for="name">Your name</label>
+        <input id="name" name="name" maxlength="100" required
+               value="{{ session.get('username', '') }}">
+
+        <label for="email">Email address</label>
+        <input id="email" type="email" name="email" maxlength="254" required>
+
+        <label for="message">Message / Feedback</label>
+        <textarea id="message" name="message" maxlength="5000"
+                  required></textarea>
+
+        <button class="btn full" type="submit">Send Message</button>
+    </form>
+</section>
+{% endblock %}

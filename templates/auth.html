@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if mode == "login" %}Login{% else %}Create Account{% endif %} | CodeSphere
+{% endblock %}
+
+{% block content %}
+<section class="form-card">
+    {% if mode == "login" %}
+        <span class="tag">WELCOME BACK</span>
+        <h1 style="font-size: 32px;">Login</h1>
+        <p class="muted">Log in to access your account.</p>
+
+        <form method="POST" action="{{ url_for('login') }}">
+            <label for="email">Email address</label>
+            <input id="email" type="email" name="email"
+                   autocomplete="email" required>
+
+            <label for="password">Password</label>
+            <input id="password" type="password" name="password"
+                   autocomplete="current-password" required>
+
+            <button class="btn full" type="submit">Login</button>
+        </form>
+
+        <p class="muted" style="margin-top: 20px;">
+            Don't have an account yet?
+            <a href="{{ url_for('register') }}">Register here</a>
+        </p>
+    {% else %}
+        <span class="tag">JOIN OUR COMMUNITY</span>
+        <h1 style="font-size: 32px;">Create Account</h1>
+        <p class="muted">Create your CodeSphere account.</p>
+
+        <form method="POST" action="{{ url_for('register') }}">
+            <label for="username">Username</label>
+            <input id="username" type="text" name="username"
+                   minlength="2" maxlength="50"
+                   autocomplete="username" required>
+
+            <label for="email">Email address</label>
+            <input id="email" type="email" name="email"
+                   autocomplete="email" required>
+
+            <label for="password">Password (minimum 8 characters)</label>
+            <input id="password" type="password" name="password"
+                   minlength="8" autocomplete="new-password" required>
+
+            <button class="btn full" type="submit">Register</button>
+        </form>
+
+        <p class="muted" style="margin-top: 20px;">
+            Already have an account?
+            <a href="{{ url_for('login') }}">Login here</a>
+        </p>
+    {% endif %}
+</section>
+{% endblock %}

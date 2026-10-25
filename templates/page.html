@@ -1,0 +1,47 @@
+
+{% extends "base.html" %}
+
+{% block title %}{{ page.title }} | CodeSphere{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <span class="tag">CODESPHERE · YOUR TECH JOURNEY</span>
+    <h1>{{ page.title }}</h1>
+    <p class="muted">{{ page.intro }}</p>
+
+    {% if home %}
+        <p style="margin-top: 22px;">
+            <a class="btn" href="{{ url_for('section', name='learning') }}">Start Learning</a>
+            <a class="btn btn-secondary" href="{{ url_for('section', name='projects') }}">Explore Projects</a>
+        </p>
+    {% endif %}
+</section>
+
+<section>
+    <div class="section-head">
+        <h2>
+            {% if home %}Explore CodeSphere{% else %}Explore Resources{% endif %}
+        </h2>
+        <p class="muted">Practical resources for IT students and professionals.</p>
+    </div>
+
+    <div class="grid">
+        {% for item in page["items"] %}
+            <article class="card">
+                <div class="card-icon">{{ item[0] }}</div>
+                <h3>{{ item[1] }}</h3>
+                <p>{{ item[2] }}</p>
+
+                {% if item|length > 3 %}
+                    <a href="{{ item[3] }}"
+                       {% if home %}{% else %}target="_blank" rel="noopener noreferrer"{% endif %}>
+                        {% if home %}Open Section →{% else %}Visit Resource ↗{% endif %}
+                    </a>
+                {% endif %}
+            </article>
+        {% else %}
+            <p class="muted">There is no content on this page yet.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
