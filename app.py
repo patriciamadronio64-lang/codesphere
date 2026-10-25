@@ -1,30 +1,26 @@
-
 import os
-import sqlite3
 from functools import wraps
-from pathlib import Path
-
 from flask import (
     Flask, render_template, request, redirect,
     url_for, session, flash, g
 )
 from werkzeug.security import generate_password_hash, check_password_hash
+import psycopg2
+from psycopg2.extras import RealDictRow
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get(
     "SECRET_KEY", "dev-only-change-this-secret"
 )
 
-BASE_DIR = Path(__file__).resolve().parent
-DATABASE = BASE_DIR / "codesphere.db"
-
+# Neon PostgreSQL connection string — set this in your environment variables!
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(DATABASE)
-        g.db.row_factory = sqlite3.Row
+        g.db = psycopg2.connect(DATABASE_URL)
+        g.db.cursor_factory = psycopg2.extras.RealDictCursor
     return g.db
-
 
 @app.teardown_appcontext
 def close_db(error=None):
@@ -32,30 +28,37 @@ def close_db(error=None):
     if db is not None:
         db.close()
 
-
 def init_db():
-    with sqlite3.connect(DATABASE) as db:
-        db.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL,
-                email TEXT NOT NULL UNIQUE,
-                password_hash TEXT NOT NULL
-            )
-        """)
-        db.execute("""
-            CREATE TABLE IF NOT EXISTS messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                email TEXT NOT NULL,
-                message TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+    conn = psycopg2.connect(DATABASE_URL)
+    cur = conn.cursor()
+    
+    # Create users table — PostgreSQL uses SERIAL instead of AUTOINCREMENT
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL
+        )
+    """)
+    
+    # Create messages table — TIMESTAMP with default
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS messages (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            message TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    conn.commit()
+    cur.close()
+    conn.close()
 
-
+# Initialize tables on startup
 init_db()
-
 
 def login_required(view):
     @wraps(view)
@@ -65,7 +68,6 @@ def login_required(view):
             return redirect(url_for("login"))
         return view(*args, **kwargs)
     return wrapped_view
-
 
 CONTENT = {
     "learning": {
@@ -133,7 +135,6 @@ CONTENT = {
     }
 }
 
-
 @app.route("/")
 def home():
     featured = [
@@ -148,7 +149,6 @@ def home():
         "items": featured
     }, home=True)
 
-
 @app.route("/<name>")
 def section(name):
     if name not in CONTENT:
@@ -159,65 +159,67 @@ def section(name):
         }), 404
     return render_template("page.html", page=CONTENT[name], home=False)
 
-
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
-
+        
         if not username or not email or not password:
             flash("Please fill in all fields.", "error")
         elif len(password) < 8:
             flash("The password must be at least 8 characters long.", "error")
         else:
             db = get_db()
+            cur = db.cursor()
             try:
-                cursor = db.execute(
-                    "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
+                cur.execute(
+                    "INSERT INTO users (username, email, password_hash) VALUES (%s, %s, %s) RETURNING id",
                     (username, email, generate_password_hash(password))
                 )
+                user_id = cur.fetchone()["id"]
                 db.commit()
+                
                 session.clear()
-                session["user_id"] = cursor.lastrowid
+                session["user_id"] = user_id
                 session["username"] = username
                 flash("Registration successful! Welcome to CodeSphere.", "success")
                 return redirect(url_for("home"))
-            except sqlite3.IntegrityError:
+            except psycopg2.IntegrityError:
+                db.rollback()
                 flash("An account with that email address already exists.", "error")
-
+            finally:
+                cur.close()
     return render_template("auth.html", mode="register")
-
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
-
-        user = get_db().execute(
-            "SELECT * FROM users WHERE email = ?", (email,)
-        ).fetchone()
-
+        
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("SELECT * FROM users WHERE email = %s", (email,))
+        user = cur.fetchone()
+        cur.close()
+        
         if user and check_password_hash(user["password_hash"], password):
             session.clear()
             session["user_id"] = user["id"]
             session["username"] = user["username"]
             flash("You have successfully logged in.", "success")
             return redirect(url_for("home"))
-
+        
         flash("Incorrect email address or password.", "error")
-
     return render_template("auth.html", mode="login")
-
 
 @app.route("/logout", methods=["POST"])
 def logout():
     session.clear()
     flash("You have successfully logged out.", "success")
     return redirect(url_for("home"))
-
 
 @app.route("/profile")
 @login_required
@@ -232,29 +234,29 @@ def profile():
         ]
     }, home=False)
 
-
 @app.route("/contact", methods=["GET", "POST"])
 def contact():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip()
         message = request.form.get("message", "").strip()
-
+        
         if not name or not email or not message:
             flash("Please fill in all fields.", "error")
         elif len(message) > 5000:
             flash("Your message is too long (maximum 5000 characters).", "error")
         else:
-            get_db().execute(
-                "INSERT INTO messages (name, email, message) VALUES (?, ?, ?)",
+            db = get_db()
+            cur = db.cursor()
+            cur.execute(
+                "INSERT INTO messages (name, email, message) VALUES (%s, %s, %s)",
                 (name, email, message)
             )
-            get_db().commit()
+            db.commit()
+            cur.close()
             flash("Thank you! Your feedback has been saved.", "success")
             return redirect(url_for("contact"))
-
     return render_template("contact.html")
-
 
 if __name__ == "__main__":
     app.run(debug=True)
